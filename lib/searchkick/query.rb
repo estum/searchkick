@@ -59,8 +59,8 @@ module Searchkick
         index: index,
         body: body
       }
-      params.merge!(type: @type) if @type
-      params.merge!(routing: @routing) if @routing
+      params.merge!(type: @type) if defined?(@type) && @type
+      params.merge!(routing: @routing) if defined?(@routing) && @routing
       params
     end
 
@@ -68,7 +68,7 @@ module Searchkick
       @execute ||= begin
         begin
           response = execute_search
-          if @misspellings_below && response["hits"]["total"] < @misspellings_below
+          if defined?(@misspellings_below) && @misspellings_below && response["hits"]["total"] < @misspellings_below
             prepare
             response = execute_search
           end
@@ -108,7 +108,7 @@ module Searchkick
         includes: options[:include] || options[:includes],
         json: !options[:json].nil?,
         match_suffix: @match_suffix,
-        highlighted_fields: @highlighted_fields || []
+        highlighted_fields: (defined?(@highlighted_fields) && @highlighted_fields) || []
       }
 
       # set execute for multi search
@@ -208,7 +208,7 @@ module Searchkick
                 true
               end
 
-            if misspellings.is_a?(Hash) && misspellings[:below] && !@misspellings_below
+            if misspellings.is_a?(Hash) && misspellings[:below] && !(defined?(@misspellings_below) && @misspellings_below)
               @misspellings_below = misspellings[:below].to_i
               misspellings = false
             end
@@ -224,7 +224,7 @@ module Searchkick
                   {fuzzy_transpositions: true}
                 end
               prefix_length = (misspellings.is_a?(Hash) && misspellings[:prefix_length]) || 0
-              default_max_expansions = @misspellings_below ? 20 : 3
+              default_max_expansions = (defined?(@misspellings_below) && @misspellings_below) ? 20 : 3
               max_expansions = (misspellings.is_a?(Hash) && misspellings[:max_expansions]) || default_max_expansions
             end
 
@@ -386,7 +386,7 @@ module Searchkick
       end
 
       @body = payload
-      @facet_limits = @facet_limits || {}
+      @facet_limits ||= {}
       @page = page
       @per_page = per_page
       @padding = padding

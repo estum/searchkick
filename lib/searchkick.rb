@@ -1,4 +1,5 @@
 require "active_model"
+require "active_support/configurable"
 require "elasticsearch"
 require "hashie"
 require "searchkick/version"
@@ -27,27 +28,39 @@ module Searchkick
   class DangerousOperation < Error; end
   class ImportError < Error; end
 
+  include ActiveSupport::Configurable
+
   class << self
-    attr_accessor :search_method_name, :wordnet_path, :timeout, :models
-    attr_writer :client, :env, :search_timeout
-  end
-  self.search_method_name = :search
-  self.wordnet_path = "/var/lib/wn_s.pl"
-  self.timeout = 10
-  self.models = []
-
-  def self.client
-    @client ||=
-      Elasticsearch::Client.new(
-        url: ENV["ELASTICSEARCH_URL"],
-        transport_options: {request: {timeout: timeout}}
-      ) do |f|
-        f.use Searchkick::Middleware
-      end
+    attr_writer :search_timeout
   end
 
-  def self.env
-    @env ||= ENV["RAILS_ENV"] || ENV["RACK_ENV"] || "development"
+  config_accessor :search_method_name do
+    :search
+  end
+
+  config_accessor :wordnet_path do
+    "/var/lib/wn_s.pl"
+  end
+
+  config_accessor :timeout do
+    10
+  end
+
+  config_accessor :models do
+    []
+  end
+
+  config_accessor :client do
+    Elasticsearch::Client.new(
+      url: ENV["ELASTICSEARCH_URL"],
+      transport_options: {request: {timeout: timeout}}
+    ) do |f|
+      f.use Searchkick::Middleware
+    end
+  end
+
+  config_accessor :env do
+    ENV["RAILS_ENV"] || ENV["RACK_ENV"] || "development"
   end
 
   def self.search_timeout
@@ -155,5 +168,5 @@ module Searchkick
 end
 
 # TODO find better ActiveModel hook
-ActiveModel::Callbacks.send(:include, Searchkick::Model)
-ActiveRecord::Base.send(:extend, Searchkick::Model) if defined?(ActiveRecord)
+# ActiveModel::Callbacks.send(:include, Searchkick::Model)
+# ActiveRecord::Base.send(:extend, Searchkick::Model) if defined?(ActiveRecord)

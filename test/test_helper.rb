@@ -227,13 +227,16 @@ else
   end
 
   class Product < ActiveRecord::Base
+    extend Searchkick::Model
   end
 
   class Store < ActiveRecord::Base
+    extend Searchkick::Model
     has_many :products
   end
 
   class Animal < ActiveRecord::Base
+    extend Searchkick::Model
   end
 
   class Dog < Animal
