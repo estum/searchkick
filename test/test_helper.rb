@@ -21,8 +21,16 @@ I18n.config.enforce_available_locales = true
 ActiveJob::Base.logger = nil if defined?(ActiveJob)
 ActiveSupport::LogSubscriber.logger = Logger.new(STDOUT) if ENV["NOTIFICATIONS"]
 
-def elasticsearch2?
-  Searchkick.server_version.starts_with?("2.")
+def elasticsearch_below50?
+  Searchkick.server_below?("5.0.0-alpha1")
+end
+
+def elasticsearch_below20?
+  Searchkick.server_below?("2.0.0")
+end
+
+def elasticsearch_below14?
+  Searchkick.server_below?("1.4.0")
 end
 
 def mongoid2?
@@ -156,6 +164,43 @@ else
 
   ActiveRecord::Base.raise_in_transactional_callbacks = true if ActiveRecord::Base.respond_to?(:raise_in_transactional_callbacks=)
 
+  if defined?(Apartment)
+    class Rails
+      def self.env
+        ENV["RACK_ENV"]
+      end
+    end
+
+    tenants = ["tenant1", "tenant2"]
+    Apartment.configure do |config|
+      config.tenant_names = tenants
+      config.database_schema_file = false
+      config.excluded_models = ["Product", "Store", "Animal", "Dog", "Cat"]
+    end
+
+    class Tenant < ActiveRecord::Base
+      searchkick index_prefix: -> { Apartment::Tenant.current }
+    end
+
+    tenants.each do |tenant|
+      begin
+        Apartment::Tenant.create(tenant)
+      rescue Apartment::TenantExists
+        # do nothing
+      end
+      Apartment::Tenant.switch!(tenant)
+
+      ActiveRecord::Migration.create_table :tenants, force: true do |t|
+        t.string :name
+        t.timestamps null: true
+      end
+
+      Tenant.reindex
+    end
+
+    Apartment::Tenant.reset
+  end
+
   ActiveRecord::Migration.create_table :products do |t|
     t.string :name
     t.integer :store_id
@@ -251,7 +296,7 @@ class Store
     mappings: {
       store: {
         properties: {
-          name: {type: "string", analyzer: "keyword"}
+          name: elasticsearch_below50? ? {type: "string", analyzer: "keyword"} : {type: "keyword"}
         }
       }
     }
