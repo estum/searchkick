@@ -1,12 +1,14 @@
 module Searchkick
   module Model
+    KNOWN_KEYS = %I(_all _type batch_size callbacks conversions default_fields filterable geo_shape highlight
+      ignore_above index_name index_prefix inheritance language locations mappings match merge_mappings
+      routing searchable settings similarity special_characters stem_conversions suggest synonyms
+      text_end text_middle text_start word wordnet word_end word_middle word_start).freeze
+
+    private_constant :KNOWN_KEYS
+
     def searchkick(**options)
-      unknown_keywords = options.keys - [:_all, :_type, :batch_size, :callbacks, :conversions, :default_fields,
-        :filterable, :geo_shape, :highlight, :ignore_above, :index_name, :index_prefix, :inheritance, :language,
-        :locations, :mappings, :match, :merge_mappings, :routing, :searchable, :settings, :similarity,
-        :special_characters, :stem_conversions, :suggest, :synonyms, :text_end,
-        :text_middle, :text_start, :word, :wordnet, :word_end, :word_middle, :word_start]
-      raise ArgumentError, "unknown keywords: #{unknown_keywords.join(", ")}" if unknown_keywords.any?
+      options.assert_valid_keys(*KNOWN_KEYS)
 
       raise "Only call searchkick once per model" if respond_to?(:searchkick_index)
 
@@ -80,6 +82,7 @@ module Searchkick
         end
 
         callback_name = callbacks == :async ? :reindex_async : :reindex
+
         if respond_to?(:after_commit)
           after_commit callback_name, if: proc { self.class.search_callbacks? }
         elsif respond_to?(:after_save)
@@ -146,12 +149,6 @@ module Searchkick
         def should_index?
           true
         end unless method_defined?(:should_index?)
-
-        if defined?(Cequel) && self < Cequel::Record && !method_defined?(:destroyed?)
-          def destroyed?
-            transient?
-          end
-        end
       end
     end
   end

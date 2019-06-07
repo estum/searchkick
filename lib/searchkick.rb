@@ -17,11 +17,12 @@ require "searchkick/logging" if defined?(ActiveSupport::Notifications)
 require "active_support/core_ext/hash/deep_merge"
 
 # background jobs
-begin
-  require "active_job"
-rescue LoadError
-  # do nothing
-end
+# begin
+#   require "active_job"
+# rescue LoadError
+#   # do nothing
+# end
+
 if defined?(ActiveJob)
   require "searchkick/bulk_reindex_job"
   require "searchkick/process_queue_job"
@@ -223,8 +224,8 @@ module Searchkick
 end
 
 # TODO find better ActiveModel hook
-ActiveModel::Callbacks.send(:include, Searchkick::Model)
-
-ActiveSupport.on_load(:active_record) do
-  extend Searchkick::Model
-end
+# ActiveModel::Callbacks.send(:include, Searchkick::Model)
+#
+# ActiveSupport.on_load(:active_record) do
+#   extend Searchkick::Model
+# end
